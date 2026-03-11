@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-hats="on">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Porphyrion</title>
+    <style>
+        /* ── themes ── */
+        :root[data-theme="light"] {
+            --bg: #fdf6e3;
+            --bg2: #eee8d5;
+            --bg3: #ddd8c5;
+            --tx: #657b83;
+            --tx2: #073642;
+            --acc: #268bd2;
+            --save: #859900;
+            --red: #dc322f;
+            --yel: #b58900;
+            --brd: #cbc9b8;
+            --cbg: #e8e2cf;
+            --ccl: #2aa198;
+            --hat-op: 0.40;
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #0f1117;
+            --bg2: #181b2a;
+            --bg3: #232740;
+            --tx: #8892b0;
+            --tx2: #ccd6f6;
+            --acc: #8b9cf8;
+            --save: #8b9cf8;
+            --red: #e06c75;
+            --yel: #d4a047;
+            --brd: #2a2f50;
+            --cbg: #090c18;
+            --ccl: #56c4b0;
+            --hat-op: 0.28;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--tx);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: background .3s, color .3s;
+        }
+
+        /* ── header ── */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .6rem;
+            padding: .9rem 1rem;
+            background: var(--bg2);
+            border-bottom: 1px solid var(--brd);
+            position: relative;
+            z-index: 200;
+            flex-shrink: 0;
+        }
+
+        header img {
+            width: 52px;
+            height: 52px;
+        }
+
+        header h1 {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: var(--tx2);
+            letter-spacing: .4px;
+        }
+
+        .hdr-btns {
+            position: absolute;
+            right: 1rem;
+            display: flex;
+            gap: .5rem;
+            align-items: center;
+        }
+
+        .hdr-btn {
+            background: var(--bg3);
+            border: 1px solid var(--brd);
+            color: var(--tx);
+            padding: .28rem .75rem;
+            border-radius: 99px;
+            cursor: pointer;
+            font-size: .82rem;
+            font-weight: 600;
+            transition: .2s;
+        }
+
+        .hdr-btn:hover {
+            background: var(--acc);
+            color: #fff;
+            border-color: var(--acc);
+        }
+
+        /* ── settings ── */
+        #settings-panel {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 1rem;
+            background: var(--bg2);
+            border: 1px solid var(--brd);
+            border-radius: 10px;
+            padding: .8rem 1rem;
+            display: none;
+            flex-direction: column;
+            gap: .65rem;
+            z-index: 300;
+            min-width: 200px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+        }
+
+        #settings-panel.open {
+            display: flex;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .75rem;
+            font-size: .82rem;
+            font-weight: 600;
+            color: var(--tx2);
+        }
+
+        .toggle {
+            appearance: none;
+            width: 36px;
+            height: 20px;
+            border-radius: 10px;
+            background: var(--bg3);
+            border: 2px solid var(--brd);
+            cursor: pointer;
+            position: relative;
+            transition: .2s;
+            flex-shrink: 0;
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--tx);
+            top: 2px;
+            left: 2px;
+            transition: .2s;
+        }
+
+        .toggle:checked {
+            background: var(--acc);
+            border-color: var(--acc);
+        }
+
+        .toggle:checked::after {
+            left: 16px;
+            background: #fff;
+        }
+
+        /* ── main areas ── */
+        .ws {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── side panels ── */
+        .panel {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        #panel-saved {
+            width: 220px;
+        }
+
+        #panel-req {
+            width: 340px;
+        }
+
+        #panel-resp {
+            flex: 1;
+            background: var(--bg2);
+        }
+
+        .panel-hd {
+            padding: .5rem .9rem;
+            background: var(--bg2);
+            border-bottom: 1px solid var(--brd);
+            font-size: .66rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.1px;
+            color: var(--yel);
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            flex-shrink: 0;
+        }
+
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: .8rem .9rem;
+            display: flex;
+            flex-direction: column;
+            gap: .7rem;
+        }
+
+        .resizer {
+            width: 5px;
+            cursor: col-resize;
+            flex-shrink: 0;
+            background: var(--brd);
+            transition: background .15s;
+        }
+
+        .resizer:hover,
+        .resizer.active {
+            background: var(--acc);
+        }
+
+        /* ── inputs ── */
+        label {
+            font-size: .67rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .9px;
+            color: var(--yel);
+        }
+
+        .url-row {
+            display: flex;
+            border: 1px solid var(--brd);
+            border-radius: 6px;
+            overflow: hidden;
+            background: var(--bg2);
+        }
+
+        select#method {
+            background: var(--bg3);
+            border: none;
+            border-right: 1px solid var(--brd);
+            color: var(--acc);
+            font-weight: 700;
+            font-size: .8rem;
+            padding: .45rem .6rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input#url {
+            flex: 1;
+            min-width: 0;
+            background: transparent;
+            border: none;
+            outline: none;
+            padding: .45rem .65rem;
+            color: var(--tx2);
+            font-size: .8rem;
+        }
+
+        /* Body type selector */
+        .body-type-row {
+            display: flex;
+            gap: .35rem;
+            flex-wrap: wrap;
+            margin-bottom: .35rem;
+        }
+
+        .hdr-version {
+            font-size: 0.65rem;
+            background: var(--glass);
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-left: 10px;
+            opacity: 0.6;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            border: 1px solid var(--glass-border);
+            color: var(--accent);
+            vertical-align: middle;
+        }
+
+        .bt {
+            padding: .25rem .6rem;
+            border-radius: 4px;
+            font-size: .7rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid var(--brd);
+            background: var(--bg2);
+            color: var(--tx);
+            transition: .15s;
+        }
+
+        .bt.active {
+            background: var(--acc);
+            color: #fff;
+            border-color: var(--acc);
+        }
+
+        /* ── grid for form data ── */
+        .kv-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: var(--cbg);
+            border: 1px solid var(--brd);
+            border-radius: 6px;
+            padding: 6px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .kv-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .kv-row input {
+            flex: 1;
+            min-width: 0;
+            background: var(--bg);
+            border: 1px solid var(--brd);
+            border-radius: 4px;
+            padding: .45rem .5rem;
+            color: var(--tx2);
+            font-size: .78rem;
+            outline: none;
+            font-family: "SF Mono", "Fira Code", monospace;
+        }
+
+        .kv-del {
+            background: var(--bg3);
+            border: 1px solid var(--brd);
+            border-radius: 4px;
+            cursor: pointer;
+            color: var(--red);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            flex-shrink: 0;
+            transition: .15s;
+        }
+
+        .kv-del:hover {
+            background: var(--red);
+            color: #fff;
+            border-color: var(--red);
+        }
+
+        .kv-add {
+            background: transparent;
+            color: var(--acc);
+            border: 1px dashed var(--acc);
+            border-radius: 4px;
+            padding: .4rem;
+            font-size: .75rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            transition: .15s;
+        }
+
+        .kv-add:hover {
+            background: var(--acc);
+            color: #fff;
+        }
+
+        textarea#body {
+            width: 100%;
+            min-height: 120px;
+            background: var(--cbg);
+            border: 1px solid var(--brd);
+            border-radius: 6px;
+            color: var(--ccl);
+            font-family: "SF Mono", "Fira Code", monospace;
+            font-size: .77rem;
+            line-height: 1.6;
+            padding: .65rem;
+            outline: none;
+            resize: vertical;
+        }
+
+        .row {
+            display: flex;
+            gap: .6rem;
+        }
+
+        button {
+            padding: .5rem 1.1rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: .85rem;
+            cursor: pointer;
+            border: none;
+            transition: .18s;
+        }
+
+        #sendBtn {
+            background: var(--acc);
+            color: #fff;
+            flex: 1;
+        }
+
+        #saveBtn {
+            background: transparent;
+            color: var(--save);
+            border: 2px solid var(--save);
+        }
+
+        button:hover {
+            filter: brightness(1.12);
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            transform: none;
+            filter: none;
+        }
+
+        .hint {
+            font-size: .68rem;
+            color: var(--tx);
+            opacity: .55;
+        }
+
+        /* ── sidebar list with folders ── */
+        #savedList {
+            display: flex;
+            flex-direction: column;
+            gap: .35rem;
+        }
+
+        .folder-group {
+            margin-bottom: .5rem;
+        }
+
+        .folder-title {
+            font-size: .65rem;
+            font-weight: 800;
+            color: var(--tx);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: .2rem .4rem;
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .folder-title::before {
+            content: '▼';
+            font-size: .55rem;
+            transition: .2s;
+        }
+
+        .folder-group.collapsed .folder-title::before {
+            transform: rotate(-90deg);
+        }
+
+        .folder-items {
+            display: flex;
+            flex-direction: column;
+            gap: .35rem;
+            padding-left: .5rem;
+            margin-top: .35rem;
+        }
+
+        .folder-group.collapsed .folder-items {
+            display: none;
+        }
+
+        .s-item {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .35rem .55rem;
+            background: var(--bg2);
+            border: 1px solid var(--brd);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: .72rem;
+            transition: .15s;
+        }
+
+        .s-item:hover {
+            background: var(--bg3);
+        }
+
+        .s-name {
+            flex: 1;
+            font-weight: 600;
+            color: var(--tx2);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .s-method {
+            font-weight: 700;
+            color: var(--acc);
+            font-size: .6rem;
+            padding: .1rem .3rem;
+            background: var(--bg3);
+            border-radius: 3px;
+        }
+
+        .s-del {
+            color: var(--red);
+            font-weight: 700;
+            font-size: .82rem;
+            padding: 0 .2rem;
+            cursor: pointer;
+        }
+
+        .s-del:hover {
+            opacity: .7;
+        }
+
+        .empty {
+            font-size: .75rem;
+            color: var(--tx);
+            opacity: .45;
+            font-style: italic;
+        }
+
+        /* ── response area ── */
+        pre#resp {
+            font-family: "SF Mono", "Fira Code", monospace;
+            font-size: .79rem;
+            line-height: 1.7;
+            color: var(--ccl);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        pre#resp.err {
+            color: var(--red);
+        }
+
+        pre#resp.dim {
+            color: var(--tx);
+            font-style: italic;
+        }
+
+        /* ── floating hats ── */
+        #hatsBg {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        #hatsBg img {
+            position: absolute;
+            mix-blend-mode: multiply;
+        }
+
+        :root[data-theme="dark"] #hatsBg img {
+            mix-blend-mode: screen;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="hatsBg"></div>
+
+    <header>
+        <img src="hat.png" alt="">
+        <h1>Porphyrion<span class="hdr-version">v0.0.1</span></h1>
+        <div class="hdr-btns">
+            <button class="hdr-btn" id="gearBtn">&#9881; Settings</button>
+            <div id="settings-panel">
+                <div class="setting-row">
+                    Dark mode
+                    <input type="checkbox" class="toggle" id="darkToggle">
+                </div>
+                <div class="setting-row">
+                    Animated hats
+                    <input type="checkbox" class="toggle" id="hatsToggle" checked>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="ws">
+
+        <div class="panel" id="panel-saved">
+            <div class="panel-hd">Saved</div>
+            <div class="panel-body">
+                <div id="savedList"><span class="empty">No saved requests.</span></div>
+            </div>
+        </div>
+
+        <div class="resizer" id="r1"></div>
+
+        <div class="panel" id="panel-req">
+            <div class="panel-hd">Request</div>
+            <div class="panel-body">
+                <div class="row">
+                    <div style="flex:1">
+                        <label>Name</label>
+                        <input id="reqName" type="text" placeholder="" class="url-row"
+                            style="width:100%; margin-top:.35rem; padding:.45rem .65rem; border:1px solid var(--brd); border-radius:6px; background:var(--bg2); color:var(--tx2); font-size:.8rem; outline:none;">
+                    </div>
+                    <div style="flex:1">
+                        <label>Folder</label>
+                        <input id="reqFolder" type="text" placeholder=""
+                            style="width:100%; margin-top:.35rem; padding:.45rem .65rem; border:1px solid var(--brd); border-radius:6px; background:var(--bg2); color:var(--tx2); font-size:.8rem; outline:none;">
+                    </div>
+                </div>
+                <div>
+                    <label>URL</label>
+                    <div class="url-row" style="margin-top:.35rem">
+                        <select id="method">
+                            <option>GET</option>
+                            <option selected>POST</option>
+                            <option>PUT</option>
+                            <option>DELETE</option>
+                            <option>PATCH</option>
+                        </select>
+                        <input id="url" type="text" placeholder="https://..." value="">
+                    </div>
+                </div>
+                <div style="margin-top:.6rem">
+                    <label>Auth</label>
+                    <div class="url-row" style="margin-top:.35rem">
+                        <select id="authType"
+                            style="width:140px; background:var(--bg2); border:1px solid var(--brd); color:var(--tx2); border-radius:6px; padding:.45rem .5rem;">
+                            <option value="none" selected>No Auth</option>
+                            <option value="bearer">Bearer Token</option>
+                        </select>
+                        <input id="authToken" type="text" placeholder="Token"
+                            style="display:none; flex:1; padding:.45rem .65rem; border:1px solid var(--brd); border-radius:6px; background:var(--bg2); color:var(--tx2); font-size:.8rem; outline:none;">
+                    </div>
+                </div>
+                <div>
+                    <label>Body</label>
+                    <div class="body-type-row" id="bodyTypes" style="margin-top:.35rem">
+                        <span class="bt" data-type="none">No Body</span>
+                        <span class="bt active" data-type="form">Form Encoded</span>
+                        <span class="bt" data-type="json">JSON</span>
+                        <span class="bt" data-type="xml">XML</span>
+                        <span class="bt" data-type="text">TEXT</span>
+                    </div>
+                    <div id="formGrid" class="kv-grid"></div>
+                    <textarea id="body" style="display:none;" placeholder="key=value&key2=value2"></textarea>
+                </div>
+                <div class="row">
+                    <button id="sendBtn">Send</button>
+                    <button id="saveBtn">Save</button>
+                </div>
+                <div class="hint"></div>
+            </div>
+        </div>
+
+        <div class="resizer" id="r2"></div>
+
+        <div class="panel" id="panel-resp">
+            <div class="panel-hd">
+                Response
+                <span id="badge"></span>
+                <span id="timing" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--tx)"></span>
+            </div>
+            <div class="panel-body">
+                <pre id="resp" class="dim">Prepare to call your API...</pre>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* ── theme logic ── */
+        const root = document.documentElement;
+
+        function applyTheme(dark) {
+            root.setAttribute('data-theme', dark ? 'dark' : 'light');
+            document.getElementById('darkToggle').checked = dark;
+            localStorage.setItem('ph-dark', dark ? '1' : '');
+        }
+
+        document.getElementById('darkToggle').addEventListener('change', e => applyTheme(e.target.checked));
+        applyTheme(!!localStorage.getItem('ph-dark'));
+
+        // Settings panel toggle
+        const gearBtn = document.getElementById('gearBtn');
+        const settingsPanel = document.getElementById('settings-panel');
+        gearBtn.addEventListener('click', e => { e.stopPropagation(); settingsPanel.classList.toggle('open'); });
+        document.addEventListener('click', () => settingsPanel.classList.remove('open'));
+        settingsPanel.addEventListener('click', e => e.stopPropagation());
+
+        /* ── bouncy hats ── */
+        const hatsBg = document.getElementById('hatsBg');
+        const HATS = [];
+
+        class Hat {
+            constructor() {
+                this.el = document.createElement('img');
+                this.el.src = 'hat.png';
+                hatsBg.appendChild(this.el);
+                this.reset();
+            }
+            reset() {
+                this.w = 28 + Math.random() * 55;
+                this.x = Math.random() * (window.innerWidth - this.w);
+                this.y = window.innerHeight + this.w;
+                this.vx = (Math.random() < .5 ? -1 : 1) * (30 + Math.random() * 70);
+                this.vy = -(45 + Math.random() * 75);
+                this.rot = (Math.random() - .5) * 20;
+                this.vr = (Math.random() - .5) * 25;
+                this.el.style.width = this.w + 'px';
+                this.el.style.opacity = 0;
+            }
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                this.rot += this.vr * dt;
+                // Bounce off sides
+                if (this.x < 0) { this.x = 0; this.vx = Math.abs(this.vx); }
+                if (this.x > window.innerWidth - this.w) { this.x = window.innerWidth - this.w; this.vx = -Math.abs(this.vx); }
+                // Opacity: fade in from bottom, fade out at top
+                const hatOp = parseFloat(getComputedStyle(root).getPropertyValue('--hat-op')) || 0.4;
+                const fromBottom = (window.innerHeight - this.y) / (window.innerHeight * 0.25);
+                const fromTop = this.y / (window.innerHeight * 0.25);
+                this.el.style.opacity = hatOp * Math.max(0, Math.min(1, Math.min(fromBottom, fromTop)));
+                this.el.style.transform = `translate(${this.x}px,${this.y}px) rotate(${this.rot}deg)`;
+                if (this.y < -this.w * 2) this.reset();
+            }
+        }
+
+        // Create hats
+        for (let i = 0; i < 12; i++) {
+            const h = new Hat();
+            // stagger them a bit
+            HATS.push(h);
+        }
+
+        let hatsActive = true;
+        let lastTs = null;
+        function animLoop(ts) {
+            if (hatsActive) {
+                const dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.1) : 0;
+                lastTs = ts;
+                HATS.forEach(h => h.update(dt));
+            }
+            requestAnimationFrame(animLoop);
+        }
+        requestAnimationFrame(animLoop);
+
+        document.getElementById('hatsToggle').addEventListener('change', e => {
+            hatsActive = e.target.checked;
+            lastTs = null;
+            if (!hatsActive) HATS.forEach(h => { h.el.style.opacity = 0; });
+            localStorage.setItem('ph-hats', hatsActive ? '1' : '');
+        });
+        // Restore hats preference
+        if (localStorage.getItem('ph-hats') === '') {
+            hatsActive = false;
+            document.getElementById('hatsToggle').checked = false;
+            HATS.forEach(h => { h.el.style.opacity = 0; });
+        }
+
+        /* ── resizing logic ── */
+        function makeResizable(resizerId, panelId) {
+            const r = document.getElementById(resizerId);
+            const p = document.getElementById(panelId);
+            let drag = false, sx, sw;
+            r.addEventListener('mousedown', e => { drag = true; sx = e.clientX; sw = p.offsetWidth; r.classList.add('active'); document.body.style.cssText = 'cursor:col-resize;user-select:none'; });
+            document.addEventListener('mousemove', e => { if (drag) p.style.width = Math.max(140, Math.min(600, sw + e.clientX - sx)) + 'px'; });
+            document.addEventListener('mouseup', () => { if (!drag) return; drag = false; r.classList.remove('active'); document.body.style.cssText = ''; });
+        }
+        makeResizable('r1', 'panel-saved');
+        makeResizable('r2', 'panel-req');
+
+        /* ── body type logic ── */
+        const BODY_PLACEHOLDERS = {
+            none: '',
+            form: 'key=value&key2=value2',
+            json: '{\n  "key": "value"\n}',
+            xml: '<?xml version="1.0"?>\n<root>\n  <key>value</key>\n</root>',
+            text: 'Plain text...'
+        };
+        const BODY_CT = {
+            form: 'application/x-www-form-urlencoded',
+            json: 'application/json',
+            xml: 'application/xml',
+            text: 'text/plain'
+        };
+        let bodyType = 'form';
+
+        let formGridData = [
+            { k: '', v: '' }
+        ];
+
+        function renderFormGrid() {
+            const container = document.getElementById('formGrid');
+            container.innerHTML = '';
+
+            formGridData.forEach((row, idx) => {
+                const rowEl = document.createElement('div');
+                rowEl.className = 'kv-row';
+                rowEl.innerHTML = `
+                    <input type="text" placeholder="Key" value="${row.k}" data-idx="${idx}" class="k-in">
+                    <input type="text" placeholder="Value" value="${row.v}" data-idx="${idx}" class="v-in">
+                    <div class="kv-del" data-idx="${idx}">&times;</div>
+                `;
+                container.appendChild(rowEl);
+            });
+            const addBtn = document.createElement('button');
+            addBtn.className = 'kv-add';
+            addBtn.textContent = '+ Add Field';
+            addBtn.onclick = () => { formGridData.push({ k: '', v: '' }); renderFormGrid(); };
+            container.appendChild(addBtn);
+        }
+        renderFormGrid();
+
+        document.getElementById('formGrid').addEventListener('input', e => {
+            if (e.target.classList.contains('k-in')) formGridData[e.target.dataset.idx].k = e.target.value;
+            if (e.target.classList.contains('v-in')) formGridData[e.target.dataset.idx].v = e.target.value;
+        });
+        document.getElementById('formGrid').addEventListener('click', e => {
+            const delBtn = e.target.closest('.kv-del');
+            if (delBtn) {
+                formGridData.splice(delBtn.dataset.idx, 1);
+                renderFormGrid();
+            }
+        });
+
+        document.getElementById('bodyTypes').addEventListener('click', e => {
+            const btn = e.target.closest('.bt');
+            if (!btn) return;
+            bodyType = btn.dataset.type;
+            document.querySelectorAll('.bt').forEach(b => b.classList.toggle('active', b === btn));
+            const ta = document.getElementById('body');
+            const fg = document.getElementById('formGrid');
+
+            if (bodyType === 'form') {
+                ta.style.display = 'none';
+                fg.style.display = '';
+            } else if (bodyType === 'none') {
+                ta.style.display = 'none';
+                fg.style.display = 'none';
+            } else {
+                ta.style.display = '';
+                fg.style.display = 'none';
+                ta.placeholder = BODY_PLACEHOLDERS[bodyType] || '';
+            }
+        });
+
+        document.getElementById('authType').addEventListener('change', e => {
+            document.getElementById('authToken').style.display = e.target.value === 'bearer' ? 'block' : 'none';
+        });
+
+        /* ── saved calls ── */
+        let savedList = [];
+
+        async function loadSaved() {
+            try {
+                const r = await fetch('/requests.json');
+                if (r.ok) {
+                    savedList = await r.json();
+                    if (!Array.isArray(savedList)) savedList = [];
+                    renderSaved();
+                }
+            } catch (e) {
+                console.error("Failed to load requests", e);
+            }
+        }
+
+        async function storeSaved() {
+            try {
+                await fetch('/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(savedList)
+                });
+            } catch (e) {
+                console.error("Failed to save requests", e);
+            }
+        }
+
+        function renderSaved() {
+            const el = document.getElementById('savedList');
+            if (!savedList.length) { el.innerHTML = '<span class="empty">No saved requests.</span>'; return; }
+            el.innerHTML = '';
+
+            // random id if missing
+            savedList.forEach(item => { if (!item.id) item.id = Math.random().toString(36).substr(2, 9); });
+
+            /* Build a nested tree from slash-separated folder paths.
+             * Each node: { children: {name: node}, items: [] }
+             * e.g. folder "Services/Auth" => root.children.Services.children.Auth.items
+             */
+            function buildTree(list) {
+                const root = { children: {}, items: [] };
+                list.forEach(e => {
+                    const parts = (e.folder || 'Uncategorized').split('/').map(p => p.trim()).filter(Boolean);
+                    let node = root;
+                    parts.forEach(part => {
+                        if (!node.children[part]) node.children[part] = { children: {}, items: [] };
+                        node = node.children[part];
+                    });
+                    node.items.push(e);
+                });
+                return root;
+            }
+
+            /* Render a tree node recursively into a container element. */
+            function renderNode(node, container, depth) {
+                // Render subfolders first (sorted)
+                Object.keys(node.children).sort().forEach(name => {
+                    const group = document.createElement('div');
+                    group.className = 'folder-group';
+                    group.style.paddingLeft = (depth * 10) + 'px';
+
+                    const title = document.createElement('div');
+                    title.className = 'folder-title';
+                    title.textContent = name;
+                    title.onclick = () => group.classList.toggle('collapsed');
+
+                    const items = document.createElement('div');
+                    items.className = 'folder-items';
+
+                    group.appendChild(title);
+                    group.appendChild(items);
+                    container.appendChild(group);
+
+                    renderNode(node.children[name], items, depth + 1);
+                });
+
+                // Render requests inside this node
+                node.items.forEach(e => {
+                    const row = document.createElement('div');
+                    row.className = 's-item';
+                    row.innerHTML = `<span class="s-method">${e.method}</span><span class="s-name" title="${e.url}">${e.name || e.url}</span><span class="s-del" data-id="${e.id}">&times;</span>`;
+                    row.addEventListener('click', ev => {
+                        if (ev.target.dataset.id != null) {
+                            const idx = savedList.findIndex(x => x.id === ev.target.dataset.id);
+                            if (idx >= 0) { savedList.splice(idx, 1); storeSaved(); renderSaved(); }
+                        } else {
+                            document.getElementById('reqName').value = e.name || '';
+                            document.getElementById('reqFolder').value = e.folder || '';
+                            document.getElementById('method').value = e.method;
+                            document.getElementById('url').value = e.url;
+                            document.getElementById('authType').value = e.authType || 'none';
+                            document.getElementById('authToken').value = e.authToken || '';
+                            document.getElementById('authToken').style.display = (e.authType === 'bearer') ? 'block' : 'none';
+                            document.getElementById('body').value = e.body || '';
+                            if (e.bodyType) {
+                                document.querySelector(`.bt[data-type="${e.bodyType}"]`).click();
+                                if (e.bodyType === 'form' && e.formGridData) {
+                                    formGridData = JSON.parse(JSON.stringify(e.formGridData));
+                                    renderFormGrid();
+                                }
+                            }
+                        }
+                    });
+                    container.appendChild(row);
+                });
+            }
+
+            const tree = buildTree(savedList);
+            renderNode(tree, el, 0);
+        }
+        loadSaved(); // fetch on start
+
+        function doSave() {
+            const name = document.getElementById('reqName').value.trim() || 'Untitled';
+            const folder = document.getElementById('reqFolder').value.trim() || 'Uncategorized';
+            const url = document.getElementById('url').value.trim();
+            const method = document.getElementById('method').value;
+            const body = document.getElementById('body').value.trim();
+            if (!url) return;
+
+            const entry = {
+                id: Math.random().toString(36).substr(2, 9), name, folder, method, url,
+                authType: document.getElementById('authType').value,
+                authToken: document.getElementById('authToken').value.trim(),
+                body, bodyType
+            };
+            if (bodyType === 'form') entry.formGridData = JSON.parse(JSON.stringify(formGridData));
+
+            // update existing or push new
+            const key = method + '|' + url;
+            const idx = savedList.findIndex(e => e.method + '|' + e.url === key && e.folder === folder);
+
+            if (idx >= 0) {
+                entry.id = savedList[idx].id; // keep the id
+                savedList[idx] = entry;
+            } else {
+                savedList.push(entry);
+            }
+
+            renderSaved();
+            storeSaved();
+            const btn = document.getElementById('saveBtn');
+            btn.textContent = idx >= 0 ? 'Updated' : 'Saved';
+            setTimeout(() => btn.textContent = 'Save', 1800);
+        }
+
+        /* ── trigger the proxy ── */
+        async function doSend() {
+            const url = document.getElementById('url').value.trim();
+            const method = document.getElementById('method').value;
+            const body = document.getElementById('body').value.trim();
+            const resp = document.getElementById('resp');
+            const badge = document.getElementById('badge');
+            const timing = document.getElementById('timing');
+            const btn = document.getElementById('sendBtn');
+
+            if (!url) { resp.textContent = 'Error: URL is empty.'; resp.className = 'err'; return; }
+            btn.disabled = true; btn.textContent = 'Sending...';
+            resp.className = 'dim'; resp.textContent = 'Waiting...';
+            badge.textContent = ''; timing.textContent = '';
+
+            const ct = bodyType === 'none' ? '' : (BODY_CT[bodyType] || 'text/plain');
+
+            let finalBody = body;
+            if (bodyType === 'form') {
+                const searchParams = new URLSearchParams();
+                formGridData.forEach(row => { if (row.k) searchParams.append(row.k, row.v); });
+                finalBody = searchParams.toString();
+            }
+
+            const params = new URLSearchParams({
+                url,
+                method,
+                body: bodyType === 'none' ? '' : finalBody,
+                ct
+            });
+
+            const authTypeStr = document.getElementById('authType').value;
+            if (authTypeStr === 'bearer') {
+                params.append('auth', 'Bearer ' + document.getElementById('authToken').value.trim());
+            }
+
+            const t0 = Date.now();
+            try {
+                const r = await fetch('/proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString()
+                });
+                const text = await r.text();
+                const ms = Date.now() - t0;
+                const proxyStatus = parseInt(r.headers.get('X-Proxy-Status') || '0', 10);
+                const isErr = text.startsWith('{"error":');
+
+                let badgeColor, badgeText;
+                if (isErr || proxyStatus === 0) {
+                    badgeColor = 'var(--red)';
+                    badgeText = 'Error';
+                } else if (proxyStatus >= 500) {
+                    badgeColor = 'var(--red)';
+                    badgeText = proxyStatus;
+                } else if (proxyStatus >= 400) {
+                    badgeColor = '#e67e22';
+                    badgeText = proxyStatus;
+                } else if (proxyStatus >= 300) {
+                    badgeColor = '#3498db';
+                    badgeText = proxyStatus;
+                } else {
+                    badgeColor = 'var(--save)';
+                    badgeText = proxyStatus;
+                }
+                badge.innerHTML = `<span style="background:${badgeColor};color:#fff;padding:.1rem .5rem;border-radius:99px;font-size:.72rem;font-weight:700">${badgeText}</span>`;
+                timing.textContent = ms + ' ms';
+                try { resp.textContent = JSON.stringify(JSON.parse(text), null, 2); }
+                catch { resp.textContent = text || '(Empty)'; }
+                resp.className = (isErr || proxyStatus >= 400) ? 'err' : '';
+            } catch (e) {
+                resp.textContent = 'Network Error: ' + e.message; resp.className = 'err';
+                badge.innerHTML = `<span style="background:var(--red);color:#fff;padding:.1rem .5rem;border-radius:99px;font-size:.72rem;font-weight:700">Failed</span>`;
+                timing.textContent = (Date.now() - t0) + ' ms';
+            }
+            btn.disabled = false; btn.textContent = 'Send';
+        }
+
+        document.getElementById('sendBtn').onclick = doSend;
+        document.getElementById('saveBtn').onclick = doSave;
+        document.getElementById('body').addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'Enter') doSend(); });
+    </script>
+</body>
+
+</html>
