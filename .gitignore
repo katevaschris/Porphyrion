@@ -1,0 +1,14 @@
+# Compiled C binary
+porter
+
+.DS_Store
+
+# User data
+# Ignore all request contents (to avoid pushing confidantial information to GitHub)
+data/*
+
+# Keep the data folder itself
+!data/.gitkeep
+
+# Ignore loose json files in the root just in case
+*.json
