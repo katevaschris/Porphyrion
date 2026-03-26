@@ -1,22 +1,39 @@
-VERSION = v0.0.1
-CC = gcc
-CFLAGS  = -Wall -Wextra -Wshadow -Wformat=2 -Wformat-security \
-           -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
-           -Os -Iinclude -DPORPHYRION_VERSION=\"$(VERSION)\"
+VERSION = v0.3
+CC      = gcc
+
+CFLAGS  = -std=c11 -Os -Iinclude -DPORPHYRION_VERSION=\"$(VERSION)\"
+CFLAGS += -Wcast-align -Wcast-qual -Wconversion -Wdouble-promotion \
+          -Wduplicated-branches -Wduplicated-cond -Werror -Wextra \
+          -Wformat=2 -Wformat-security -Wformat-signedness \
+          -Wjump-misses-init -Wlogical-op -Wall -Wmissing-prototypes \
+          -Wnested-externs -Wnull-dereference -Wold-style-definition \
+          -Wpedantic -Wpointer-arith -Wredundant-decls -Wshadow \
+          -Wsign-conversion -Wstack-usage=8192 -Wstrict-overflow=2 \
+          -Wstrict-prototypes -Wundef -Wwrite-strings
+CFLAGS += -D_FORTIFY_SOURCE=2 -fstack-protector-strong
+
 LDFLAGS = -lcurl -s
 
-TARGET = porter
-SRC = src/main.c src/decoder.c src/proxy_networking.c src/http_response.c src/call_api.c src/router.c
-IMAGE_NAME = porphyrion
-PORT = 8099
+TARGET     = porter
+SRC        = src/call_api.c \
+             src/decoder.c \
+             src/http_parser.c \
+             src/http_response.c \
+             src/main.c \
+             src/proxy_networking.c \
+             src/router.c
 
-OBJ_DIR ?= obj
-OBJ = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(SRC))
+IMAGE_NAME = porphyrion
+PORT       = 8099
+OBJ_DIR   ?= obj
+OBJ        = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(SRC))
+
+.PHONY: all clean docker-build docker-clean docker-run
 
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) $(OBJ) -o $(TARGET) $(LDFLAGS)
+	$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS)
 
 $(OBJ_DIR)/%.o: src/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -41,8 +58,3 @@ docker-build:
 docker-clean:
 	podman rmi $(IMAGE_NAME) || true
 	podman image prune -f
-
-sync-version:
-	@echo "Syncing version $(VERSION)..."
-	@sed -i '' 's/<span class="hdr-version">.*<\/span>/<span class="hdr-version">$(VERSION)<\/span>/' index.html
-	@sed -i '' 's/<sub>.*<\/sub>/<sub>$(VERSION)<\/sub>/' README.md

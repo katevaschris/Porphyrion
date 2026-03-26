@@ -4,14 +4,15 @@
 /*
  * Ηits the api via curl and proxies data back.
  *
- * @param sock      client socket fd
- * @param url       target api url
- * @param method    http method
- * @param post_body the payload
- * @param ct        Content-Type header
- * @param auth      Auth header
+ * @param sock
+ * @param url
+ * @param method
+ * @param post_body
+ * @param ct
+ * @param headers_payload
  */
 void perform_api_call(int sock, const char *url, const char *method,
-                      const char *post_body, const char *ct, const char *auth);
+                      const char *post_body, const char *ct,
+                      const char *headers_payload);
 
 #endif

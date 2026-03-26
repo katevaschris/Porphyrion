@@ -1,169 +1,298 @@
 #include "router.h"
-#include "http_response.h"
 #include "call_api.h"
 #include "decoder.h"
-
+#include "http_parser.h"
+#include "http_response.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/socket.h>
 #include <strings.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #define BUFFER_SIZE 65536
+#define MAX_BODY_SIZE 65536
+#define URL_SIZE 2048
+#define METHOD_SIZE 16
+#define BODY_SIZE 16384
+#define CT_SIZE 256
+#define AUTH_SIZE 8192
+
+static const struct
+{
+    const char *route;
+    const char *fs_path;
+    const char *ct;
+} STATIC_FILES[] = {
+    {"/", "web/index.html", "text/html"},
+    {"/index.html", "web/index.html", "text/html"},
+    {"/css/style.css", "web/css/style.css", "text/css"},
+    {"/js/app.js", "web/js/app.js", "text/javascript"},
+    {"/resources/hat.png", "resources/hat.png", "image/png"},
+    {"/requests.json", "data/requests.json", "application/json"},
+};
+#define STATIC_FILE_COUNT (int)(sizeof(STATIC_FILES) / sizeof(STATIC_FILES[0]))
 
 /*
- * Reads the full http request from the socket into buf.
+ * Reads the full HTTP request from the socket into buf.
+ * Handles reading chunks if a Content-Length is present.
  *
- * @param sock        client socket fd
- * @param buf         buffer to read into
- * @param max_size    max buffer size
- * @param hdr_end_out points to the end of headers (\r\n\r\n)
- * @return total bytes read, or <= 0 on error
+ * @param sock
+ * @param buf
+ * @param buf_size
+ * @param req
+ * @return
  */
-static int read_full_request(int sock, char *buf, size_t max_size, char **hdr_end_out) {
-    int n = read(sock, buf, max_size - 1);
-    if (n <= 0) return n;
+static int read_full_request(int sock, char *buf, int buf_size,
+                             HttpRequest *req)
+{
+    int n = (int)read(sock, buf, (size_t)buf_size - 1);
+    if (n <= 0)
+    {
+        return n;
+    }
     buf[n] = '\0';
-
-    char *hdr_end = strstr(buf, "\r\n\r\n");
-    if (hdr_end) {
-        int cl = 0;
-        char *p = buf;
-        while (p && p < hdr_end) {
-            if (strncasecmp(p, "Content-Length:", 15) == 0) { cl = atoi(p + 15); break; }
-            p = strstr(p, "\r\n");
-            if (p) p += 2;
+    HttpParseResult pr = http_parse_request(buf, (size_t)n, req);
+    if (pr == HTTP_PARSE_ERROR)
+    {
+        return -1;
+    }
+    if (req->content_length > MAX_BODY_SIZE)
+    {
+        return -2;
+    }
+    if (pr == HTTP_PARSE_OK && req->content_length > 0)
+    {
+        int hdr_end_offset = (int)(req->body - buf);
+        int total_expected = hdr_end_offset + (int)req->content_length;
+        if (total_expected > buf_size - 1)
+        {
+            return -2;
         }
-        if (cl > 0) {
-            int hdr_len = (hdr_end + 4) - buf;
-            while (n < hdr_len + cl && (size_t)n < max_size - 1) {
-                int r = read(sock, buf + n, max_size - 1 - n);
-                if (r <= 0) break;
-                n += r;
-                buf[n] = '\0';
+        int read_limit = 64;
+        while (n < total_expected && read_limit-- > 0)
+        {
+            int r = (int)read(sock, buf + n, (size_t)(buf_size - 1 - n));
+            if (r <= 0)
+            {
+                break;
             }
+            n += r;
+            buf[n] = '\0';
         }
-        *hdr_end_out = strstr(buf, "\r\n\r\n");
-    } else {
-        *hdr_end_out = NULL;
+        http_parse_request(buf, (size_t)n, req);
     }
     return n;
 }
 
 /*
- * Parses a url-encoded proxy request body and triggers the api call.
+ * Sends a 413 Payload Too Large response.
  *
- * @param sock    client socket fd
- * @param buf     the full request buffer
- * @param hdr_end pointer to the end of headers
+ * @param sock
  */
-static void handle_proxy_route(int sock, char *hdr_end) {
-    char *body_start = hdr_end ? (hdr_end + 4) : NULL;
-    if (!body_start || strlen(body_start) == 0) {
-        send_text(sock, 400, "{\"error\":\"Empty body\"}");
-        return;
-    }
-
-    char url[2048] = {0}, method[16] = {0}, post_body[16384] = {0};
-    char ct[256] = {0}, auth[8192] = {0};
-
-    char *tmp = strdup(body_start);
-    char *tok = strtok(tmp, "&");
-    while (tok) {
-        if      (strncmp(tok, "url=",    4) == 0) url_decode(tok + 4,    url);
-        else if (strncmp(tok, "method=", 7) == 0) url_decode(tok + 7,    method);
-        else if (strncmp(tok, "body=",   5) == 0) url_decode(tok + 5,    post_body);
-        else if (strncmp(tok, "ct=",     3) == 0) url_decode(tok + 3,    ct);
-        else if (strncmp(tok, "auth=",   5) == 0) url_decode(tok + 5,    auth);
-        tok = strtok(NULL, "&");
-    }
-    free(tmp);
-
-    if (strlen(url) == 0) {
-        send_text(sock, 400, "{\"error\":\"Missing proxy URL\"}");
-        return;
-    }
-
-    perform_api_call(sock, url, method, post_body, ct, auth);
+static void send_413(int sock)
+{
+    const char *resp = "HTTP/1.1 413 Payload Too Large\r\n"
+                       "Content-Type: application/json\r\n"
+                       "Access-Control-Allow-Origin: *\r\n"
+                       "Content-Length: 27\r\n\r\n"
+                       "{\"error\":\"Payload too large\"}";
+    send(sock, resp, strlen(resp), 0);
 }
 
 /*
- * Saves the json to a file.
+ * Sends a 400 Bad Request.
  *
- * @param sock    client socket fd
- * @param buf     full request buffer
- * @param n       total bytes in buffer
- * @param hdr_end pointer to end of headers
+ * @param sock
+ * @param msg
  */
-static void handle_save_route(int sock, char *buf, int n, char *hdr_end) {
-    char *body_start = hdr_end ? (hdr_end + 4) : NULL;
-    if (body_start) {
-        int len = n - (body_start - buf);
+static void send_400(int sock, const char *msg)
+{
+    char body[128];
+    snprintf(body, sizeof(body), "{\"error\":\"%s\"}", msg);
+    send_text(sock, 400, body);
+}
+
+/*
+ * Parses a URL-encoded proxy request body and triggers the call.
+ *
+ * @param sock
+ * @param req
+ */
+static void handle_proxy_route(int sock, const HttpRequest *req)
+{
+    if (!req->body || req->body_len == 0)
+    {
+        send_400(sock, "Empty body");
+        return;
+    }
+    static char url[URL_SIZE], method[METHOD_SIZE],
+                post_body[BODY_SIZE], ct[CT_SIZE],
+                headers[AUTH_SIZE];
+    url[0] = method[0] = post_body[0] = ct[0] = headers[0] = '\0';
+    static char body_copy[BODY_SIZE];
+    size_t copy_len =
+        req->body_len < BODY_SIZE - 1 ? req->body_len : BODY_SIZE - 1;
+    memcpy(body_copy, req->body, copy_len);
+    body_copy[copy_len] = '\0';
+    char *p = body_copy, *end = body_copy + copy_len;
+    while (p < end)
+    {
+        char *amp = memchr(p, '&', (size_t)(end - p));
+        char *seg_end = amp ? amp : end;
+        *seg_end = '\0';
+        char *eq = strchr(p, '=');
+        if (eq)
+        {
+            *eq = '\0';
+            const char *key = p;
+            char *val = eq + 1;
+            if (strcmp(key, "url") == 0)
+            {
+                url_decode(val, url, sizeof(url));
+            }
+            else if (strcmp(key, "method") == 0)
+            {
+                url_decode(val, method, sizeof(method));
+            }
+            else if (strcmp(key, "body") == 0)
+            {
+                url_decode(val, post_body, sizeof(post_body));
+            }
+            else if (strcmp(key, "ct") == 0)
+            {
+                url_decode(val, ct, sizeof(ct));
+            }
+            else if (strcmp(key, "headers") == 0)
+            {
+                url_decode(val, headers, sizeof(headers));
+            }
+        }
+        if (amp)
+        {
+            p = amp + 1;
+        }
+        else
+        {
+            break;
+        }
+    }
+    if (url[0] == '\0')
+    {
+        send_400(sock, "Missing proxy URL");
+        return;
+    }
+    if (method[0] == '\0')
+    {
+        method[0] = 'G';
+        method[1] = 'E';
+        method[2] = 'T';
+        method[3] = '\0';
+    }
+    perform_api_call(sock, url, method, post_body, ct, headers);
+}
+
+/*
+ * Saves the JSON payload from the request body to disk.
+ *
+ * @param sock
+ * @param req
+ */
+static void handle_save_route(int sock, const HttpRequest *req)
+{
+    if (req->body && req->body_len > 0)
+    {
         FILE *f = fopen("data/requests.json", "w");
-        if (f) { fwrite(body_start, 1, len, f); fclose(f); }
+        if (f)
+        {
+            fwrite(req->body, 1, req->body_len, f);
+            fclose(f);
+        }
     }
     send_text(sock, 200, "{\"status\":\"saved\"}");
 }
 
 /*
- * Routes the request to a handler or static file.
+ * Responds to HTTP requests.
  *
- * @param sock    client socket fd
- * @param buf     full request buffer
- * @param n       total bytes read
- * @param hdr_end pointer to end of headers
+ * @param sock
  */
-static void route_request(int sock, char *buf, int n, char *hdr_end) {
-    if (strncmp(buf, "GET / ", 6) == 0 || strncmp(buf, "GET /index.html", 15) == 0) {
-        serve_file(sock, "index.html", "text/html");
-
-    } else if (strncmp(buf, "GET /hat.png", 12) == 0) {
-        serve_file(sock, "hat.png", "image/png");
-
-    } else if (strncmp(buf, "OPTIONS ", 8) == 0) {
-        const char *pre =
-            "HTTP/1.1 204 No Content\r\n"
-            "Access-Control-Allow-Origin: *\r\n"
-            "Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n"
-            "Access-Control-Allow-Headers: Content-Type\r\n\r\n";
-        send(sock, pre, strlen(pre), 0);
-
-    } else if (strncmp(buf, "GET /requests.json", 18) == 0) {
-        if (access("data/requests.json", F_OK) == 0) {
-            serve_file(sock, "data/requests.json", "application/json");
-        } else {
-            send_text(sock, 200, "[]");
-        }
-
-    } else if (strncmp(buf, "POST /save", 10) == 0) {
-        handle_save_route(sock, buf, n, hdr_end);
-
-    } else if (strncmp(buf, "POST /proxy", 11) == 0) {
-        handle_proxy_route(sock, hdr_end);
-
-    } else {
-        const char *nf = "HTTP/1.1 404 Not Found\r\n\r\n";
-        send(sock, nf, strlen(nf), 0);
-    }
+static void handle_options(int sock)
+{
+    const char *pre = "HTTP/1.1 204 No Content\r\n"
+                      "Access-Control-Allow-Origin: *\r\n"
+                      "Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n"
+                      "Access-Control-Allow-Headers: Content-Type\r\n\r\n";
+    send(sock, pre, strlen(pre), 0);
 }
 
 /*
- * Entry point for client connections.
- * Reads, routes, and terminates the socket (always the master).
+ * Routes the parsed request to a specific handler or static file.
  *
- * @param sock client socket fd
+ * @param sock
+ * @param req
  */
-void handle_client(int sock) {
-    char *buf = malloc(BUFFER_SIZE);
-    if (!buf) { close(sock); return; }
-
-    char *hdr_end = NULL;
-    int n = read_full_request(sock, buf, BUFFER_SIZE, &hdr_end);
-
-    if (n > 0) {
-        route_request(sock, buf, n, hdr_end);
+static void route_request(int sock, const HttpRequest *req)
+{
+    if (strcmp(req->method, "OPTIONS") == 0)
+    {
+        handle_options(sock);
+        return;
     }
-    free(buf);
+    if (strcmp(req->method, "POST") == 0)
+    {
+        if (strcmp(req->path, "/proxy") == 0)
+        {
+            handle_proxy_route(sock, req);
+            return;
+        }
+        if (strcmp(req->path, "/save") == 0)
+        {
+            handle_save_route(sock, req);
+            return;
+        }
+    }
+    if (strcmp(req->method, "GET") == 0)
+    {
+        for (int i = 0; i < STATIC_FILE_COUNT; i++)
+        {
+            if (strcmp(req->path, STATIC_FILES[i].route) == 0)
+            {
+                if (strcmp(STATIC_FILES[i].fs_path, "data/requests.json") ==
+                        0 &&
+                    access(STATIC_FILES[i].fs_path, F_OK) != 0)
+                {
+                    send_text(sock, 200, "[]");
+                }
+                else
+                {
+                    serve_file(sock, STATIC_FILES[i].fs_path,
+                               STATIC_FILES[i].ct);
+                }
+                return;
+            }
+        }
+    }
+    const char *nf = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+    send(sock, nf, strlen(nf), 0);
+}
+
+/*
+ * Reads the request, routes it, and terminates the socket.
+ *
+ * @param sock
+ */
+void handle_client(int sock)
+{
+    static char buf[BUFFER_SIZE];
+    HttpRequest req;
+    int n = read_full_request(sock, buf, BUFFER_SIZE, &req);
+    if (n == -2)
+    {
+        send_413(sock);
+    }
+    else if (n > 0)
+    {
+        route_request(sock, &req);
+    }
     close(sock);
 }

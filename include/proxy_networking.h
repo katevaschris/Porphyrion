@@ -1,13 +1,16 @@
 #ifndef PROXY_NETWORKING_H
 #define PROXY_NETWORKING_H
 
+#include <stddef.h>
+
 /*
- * Rewrites localhost to host.containers.internal.
- * Podman talks to host machine.
+ * Rewrites localhost / 127.0.0.1 to host.containers.internal.
+ * Pod uses this to reach the host machine.
  *
- * @param src original url string
- * @param dst resolved url buffer
+ * @param src
+ * @param dst
+ * @param size
  */
-void resolve_url(const char *src, char *dst);
+void resolve_url(const char *src, char *dst, size_t size);
 
 #endif

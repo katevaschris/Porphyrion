@@ -1,24 +1,43 @@
 #include "decoder.h"
 #include <stdio.h>
 
-/* 
- * Converts url-encoded strings back to chars.
- * Handles %xx and plus signs.
+/*
+ * Decodes a URL-encoded string.
  *
- * @param src url-encoded source
- * @param dst decoded destination buffer
+ * @param src
+ * @param dst
+ * @param dst_size
  */
-void url_decode(char *src, char *dst) {
-    while (*src) {
-        if (*src == '%') {
-            int val;
-            if (sscanf(src + 1, "%2x", &val) == 1) { *dst++ = (char)val; src += 3; }
-            else { *dst++ = *src++; }
-        } else if (*src == '+') {
-            *dst++ = ' '; src++;
-        } else {
-            *dst++ = *src++;
+void url_decode(char *src, char *dst, size_t dst_size)
+{
+    if (!src || !dst || dst_size == 0)
+        return;
+    char *d = dst;
+    const char *end = dst + dst_size - 1;
+    while (*src && d < end)
+    {
+        if (*src == '%')
+        {
+            unsigned int val;
+            if (sscanf(src + 1, "%2x", &val) == 1)
+            {
+                *d++ = (char)val;
+                src += 3;
+            }
+            else
+            {
+                *d++ = *src++;
+            }
+        }
+        else if (*src == '+')
+        {
+            *d++ = ' ';
+            src++;
+        }
+        else
+        {
+            *d++ = *src++;
         }
     }
-    *dst = '\0';
+    *d = '\0';
 }
