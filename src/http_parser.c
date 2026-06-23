@@ -1,4 +1,5 @@
 #include "http_parser.h"
+#include <assert.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,6 +37,7 @@ static int is_token_char(unsigned char c)
  */
 static void skip_ows(const char **p, const char *end)
 {
+    assert(p != NULL && *p != NULL && end != NULL);
     while (*p < end && (**p == ' ' || **p == '\t'))
     {
         (*p)++;
@@ -54,6 +56,8 @@ static void skip_ows(const char **p, const char *end)
 static int read_token(const char **p, const char *end, char *out,
                       size_t out_size)
 {
+    assert(p != NULL && *p != NULL && end != NULL && out != NULL);
+    assert(out_size > 0);
     int count = 0;
     while (*p < end && is_token_char((unsigned char)**p))
     {
@@ -81,6 +85,7 @@ static int read_token(const char **p, const char *end, char *out,
  */
 static int expect_crlf(const char **p, const char *end)
 {
+    assert(p != NULL && *p != NULL && end != NULL);
     if ((size_t)(end - *p) < 2)
     {
         return 0;
@@ -104,6 +109,7 @@ static int expect_crlf(const char **p, const char *end)
 static HttpParseResult parse_request_line(const char **p, const char *end,
                                           HttpRequest *req)
 {
+    assert(p != NULL && *p != NULL && end != NULL && req != NULL);
     if (read_token(p, end, req->method, sizeof(req->method)) < 0)
     {
         return HTTP_PARSE_ERROR;
@@ -165,6 +171,7 @@ static HttpParseResult parse_request_line(const char **p, const char *end,
 static HttpParseResult parse_headers(const char **p, const char *end,
                                      HttpRequest *req)
 {
+    assert(p != NULL && *p != NULL && end != NULL && req != NULL);
     req->num_headers = 0;
     int line_limit = 1024;
     while (line_limit-- > 0)

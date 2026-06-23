@@ -3,5 +3,5 @@
 .DS_Store
 data/
 obj/
-porter
+sam-porter
 *.o

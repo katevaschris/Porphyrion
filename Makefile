@@ -1,5 +1,7 @@
-VERSION = v0.3
-CC      = gcc
+VERSION = v0.4
+CC     ?= gcc
+
+MAKEFLAGS += --warn-undefined-variables --no-builtin-rules
 
 CFLAGS  = -std=c11 -Os -Iinclude -DPORPHYRION_VERSION=\"$(VERSION)\"
 CFLAGS += -Wcast-align -Wcast-qual -Wconversion -Wdouble-promotion \
@@ -10,11 +12,15 @@ CFLAGS += -Wcast-align -Wcast-qual -Wconversion -Wdouble-promotion \
           -Wpedantic -Wpointer-arith -Wredundant-decls -Wshadow \
           -Wsign-conversion -Wstack-usage=8192 -Wstrict-overflow=2 \
           -Wstrict-prototypes -Wundef -Wwrite-strings
-CFLAGS += -D_FORTIFY_SOURCE=2 -fstack-protector-strong
+CFLAGS += -D_FORTIFY_SOURCE=2 -fstack-protector-all
+CFLAGS += -fstack-clash-protection -fno-delete-null-pointer-checks
+CFLAGS += -ftrivial-auto-var-init=zero
+CFLAGS += -Wvla -Walloca -Wtrampolines
+CFLAGS += -MMD -MP
 
 LDFLAGS = -lcurl -s
 
-TARGET     = porter
+TARGET     = sam-porter
 SRC        = src/call_api.c \
              src/decoder.c \
              src/http_parser.c \
@@ -27,15 +33,23 @@ IMAGE_NAME = porphyrion
 PORT       = 8099
 OBJ_DIR   ?= obj
 OBJ        = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(SRC))
+DEP        = $(OBJ:.o=.d)
 
-.PHONY: all clean docker-build docker-clean docker-run
+.PHONY: all clean analyze docker-build docker-clean docker-run
+.DELETE_ON_ERROR:
+.SUFFIXES:
 
 all: $(TARGET)
 
-$(TARGET): $(OBJ)
-	$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS)
+ANALYZE = -std=c11 -Iinclude -DPORPHYRION_VERSION=\"$(VERSION)\" -Wall -Wextra -fanalyzer -Werror
+analyze:
+	@for f in $(SRC); do $(CC) $(ANALYZE) -c $$f -o /dev/null || exit 1; done
+	@echo "  -fanalyzer: clean"
 
-$(OBJ_DIR)/%.o: src/%.c | $(OBJ_DIR)
+$(TARGET): $(OBJ)
+	$(CC) -Wl,-z,noexecstack,-z,relro,-z,now $(OBJ) -o $(TARGET) $(LDFLAGS)
+
+$(OBJ_DIR)/%.o: src/%.c Makefile | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJ_DIR):
@@ -58,3 +72,5 @@ docker-build:
 docker-clean:
 	podman rmi $(IMAGE_NAME) || true
 	podman image prune -f
+
+-include $(DEP)

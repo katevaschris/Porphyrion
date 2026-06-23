@@ -22,6 +22,6 @@ echo "  Image Size: ${SIZE}"
 echo "  Running on http://localhost:$PORT"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-podman run --name "$IMAGE_NAME" --rm -d -p "$PORT:$PORT" -v "$(pwd)/data:/data" "$IMAGE_NAME"
+podman run --name "$IMAGE_NAME" --rm -d -p "$PORT:$PORT" -v "$(pwd)/data:/data" -v "$(pwd)/web:/web:ro" "$IMAGE_NAME"
 
 

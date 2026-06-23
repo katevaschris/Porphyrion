@@ -1,4 +1,5 @@
 #include "proxy_networking.h"
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -11,13 +12,17 @@
  */
 void resolve_url(const char *src, char *dst, size_t size)
 {
+    assert(src != NULL);
+    assert(dst != NULL);
+    assert(size > 0);
     if (strncmp(src, "http://localhost", 16) == 0 ||
         strncmp(src, "http://127.0.0.1", 16) == 0)
     {
-        snprintf(dst, size, "http://host.containers.internal%s", src + 16);
+        (void)snprintf(dst, size, "http://host.containers.internal%s",
+                       src + 16);
     }
     else
     {
-        snprintf(dst, size, "%s", src);
+        (void)snprintf(dst, size, "%s", src);
     }
 }

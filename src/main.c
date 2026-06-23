@@ -1,6 +1,7 @@
 #include "router.h"
 #include <arpa/inet.h>
 #include <curl/curl.h>
+#include <errno.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,10 +16,14 @@ int main(void)
     socklen_t addrlen = sizeof(addr);
 
 #ifdef SIGPIPE
-    signal(SIGPIPE, SIG_IGN);
+    (void)signal(SIGPIPE, SIG_IGN);
 #endif
 
-    curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK)
+    {
+        fprintf(stderr, "curl_global_init failed\n");
+        return 1;
+    }
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0)
@@ -31,7 +36,7 @@ int main(void)
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
     {
         perror("setsockopt");
-        close(server_fd);
+        (void)close(server_fd);
         return 1;
     }
 
@@ -43,13 +48,13 @@ int main(void)
     if (bind(server_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
         perror("bind");
-        close(server_fd);
+        (void)close(server_fd);
         return 1;
     }
     if (listen(server_fd, 10) < 0)
     {
         perror("listen");
-        close(server_fd);
+        (void)close(server_fd);
         return 1;
     }
 
@@ -57,10 +62,14 @@ int main(void)
     memset(&st_dir, 0, sizeof(st_dir));
     if (stat("data", &st_dir) == -1)
     {
-        mkdir("data", 0755);
+        if (mkdir("data", 0755) != 0 && errno != EEXIST)
+        {
+            perror("mkdir");
+        }
     }
 
-    printf("Porphyrion v%s listening on port %d\n", PORPHYRION_VERSION, PORT);
+    (void)printf("Porphyrion %s listening on port %d\n", PORPHYRION_VERSION,
+                 PORT);
 
     while (1)
     {
@@ -73,7 +82,7 @@ int main(void)
         handle_client(client);
     }
 
-    printf("Shutting down.\n");
+    (void)printf("Shutting down.\n");
     curl_global_cleanup();
     close(server_fd);
     return 0;

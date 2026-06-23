@@ -1,10 +1,40 @@
 #include "http_response.h"
+#include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#define SEND_MAX_CHUNKS 65536
+#define SERVE_MAX_CHUNKS 65536
+
+/*
+ * Writes the whole buffer to the socket, tolerating partial sends.
+ *
+ * @param sock
+ * @param buf
+ * @param len
+ * @return
+ */
+int send_all(int sock, const char *buf, size_t len)
+{
+    assert(buf != NULL);
+    size_t sent = 0;
+    int guard = 0;
+    while (sent < len && guard < SEND_MAX_CHUNKS)
+    {
+        ssize_t w = send(sock, buf + sent, len - sent, 0);
+        if (w <= 0)
+        {
+            return -1;
+        }
+        sent += (size_t)w;
+        guard++;
+    }
+    return (sent == len) ? 0 : -1;
+}
 
 /*
  * Serves a static file directly to the socket.
@@ -15,35 +45,46 @@
  */
 void serve_file(int sock, const char *path, const char *ct)
 {
+    assert(path != NULL);
+    assert(ct != NULL);
     int fd = open(path, O_RDONLY);
     if (fd < 0)
     {
         const char *nf = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
-        send(sock, nf, strlen(nf), 0);
+        (void)send_all(sock, nf, strlen(nf));
         return;
     }
     struct stat st;
     if (fstat(fd, &st) < 0)
     {
-        close(fd);
+        (void)close(fd);
         const char *err =
             "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
-        send(sock, err, strlen(err), 0);
+        (void)send_all(sock, err, strlen(err));
         return;
     }
     char hdr[256];
-    snprintf(
+    (void)snprintf(
         hdr, sizeof(hdr),
         "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %lld\r\n\r\n",
         ct, (long long)st.st_size);
-    send(sock, hdr, strlen(hdr), 0);
-    char buf[4096];
-    ssize_t n;
-    while ((n = read(fd, buf, sizeof(buf))) > 0)
+    if (send_all(sock, hdr, strlen(hdr)) != 0)
     {
-        send(sock, buf, (size_t)n, 0);
+        (void)close(fd);
+        return;
     }
-    close(fd);
+    char buf[4096];
+    int chunks = 0;
+    ssize_t n;
+    while ((n = read(fd, buf, sizeof(buf))) > 0 && chunks < SERVE_MAX_CHUNKS)
+    {
+        if (send_all(sock, buf, (size_t)n) != 0)
+        {
+            break;
+        }
+        chunks++;
+    }
+    (void)close(fd);
 }
 
 /*
@@ -55,11 +96,15 @@ void serve_file(int sock, const char *path, const char *ct)
  */
 void send_text(int sock, int status, const char *body)
 {
+    assert(body != NULL);
     char hdr[256];
-    snprintf(hdr, sizeof(hdr),
-             "HTTP/1.1 %d OK\r\nContent-Type: application/json\r\n"
-             "Access-Control-Allow-Origin: *\r\nContent-Length: %zu\r\n\r\n",
-             status, strlen(body));
-    send(sock, hdr, strlen(hdr), 0);
-    send(sock, body, strlen(body), 0);
+    (void)snprintf(
+        hdr, sizeof(hdr),
+        "HTTP/1.1 %d OK\r\nContent-Type: application/json\r\n"
+        "Access-Control-Allow-Origin: *\r\nContent-Length: %zu\r\n\r\n",
+        status, strlen(body));
+    if (send_all(sock, hdr, strlen(hdr)) == 0)
+    {
+        (void)send_all(sock, body, strlen(body));
+    }
 }

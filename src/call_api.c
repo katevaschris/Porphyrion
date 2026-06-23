@@ -1,16 +1,18 @@
 #define _POSIX_C_SOURCE 200809L
 #include "call_api.h"
+#include "http_response.h"
 #include "proxy_networking.h"
+#include <assert.h>
 #include <curl/curl.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/socket.h>
 
 #define MAX_RESPONSE_BYTES (512 * 1024)
 #define MAX_RESP_HDRS (16 * 1024)
 #define RESOLVED_URL_SIZE 2048
 #define HEADERS_BUF_SIZE 8192
 #define CT_HDR_SIZE 300
+#define MAX_HEADER_LINES 512
 
 typedef struct
 {
@@ -36,6 +38,7 @@ typedef struct
  */
 static size_t write_to_buf(void *ptr, size_t size, size_t nmemb, RespBuf *rb)
 {
+    assert(rb != NULL);
     size_t incoming = size * nmemb;
     size_t space = MAX_RESPONSE_BYTES - rb->len;
     if (incoming > space)
@@ -45,6 +48,7 @@ static size_t write_to_buf(void *ptr, size_t size, size_t nmemb, RespBuf *rb)
     }
     if (incoming > 0)
     {
+        assert(ptr != NULL);
         memcpy(rb->buf + rb->len, ptr, incoming);
         rb->len += incoming;
     }
@@ -63,12 +67,16 @@ static size_t write_to_buf(void *ptr, size_t size, size_t nmemb, RespBuf *rb)
 static size_t header_callback(void *ptr, size_t size, size_t nmemb,
                               RespHdrBuf *hb)
 {
+    assert(hb != NULL);
     size_t incoming = size * nmemb;
     size_t space = MAX_RESP_HDRS - hb->len;
     if (incoming > space)
+    {
         incoming = space;
+    }
     if (incoming > 0)
     {
+        assert(ptr != NULL);
         memcpy(hb->buf + hb->len, ptr, incoming);
         hb->len += incoming;
     }
@@ -85,11 +93,13 @@ static size_t header_callback(void *ptr, size_t size, size_t nmemb,
 static struct curl_slist *build_headers(const char *ct,
                                         const char *headers_payload)
 {
+    assert(ct != NULL);
+    assert(headers_payload != NULL);
     struct curl_slist *hdrs = NULL;
     if (ct[0] != '\0')
     {
         char ct_hdr[CT_HDR_SIZE];
-        snprintf(ct_hdr, sizeof(ct_hdr), "Content-Type: %s", ct);
+        (void)snprintf(ct_hdr, sizeof(ct_hdr), "Content-Type: %s", ct);
         hdrs = curl_slist_append(hdrs, ct_hdr);
     }
     if (headers_payload[0] != '\0')
@@ -99,10 +109,12 @@ static struct curl_slist *build_headers(const char *ct,
         buf[sizeof(buf) - 1] = '\0';
         char *saveptr;
         char *line = strtok_r(buf, "\n", &saveptr);
-        while (line)
+        int guard = 0;
+        while (line != NULL && guard < MAX_HEADER_LINES)
         {
             hdrs = curl_slist_append(hdrs, line);
             line = strtok_r(NULL, "\n", &saveptr);
+            guard++;
         }
     }
     return hdrs;
@@ -117,20 +129,24 @@ static struct curl_slist *build_headers(const char *ct,
  */
 static void setup_method(CURL *curl, const char *method, const char *post_body)
 {
+    assert(curl != NULL);
+    assert(method != NULL);
+    assert(post_body != NULL);
     if (strcmp(method, "POST") == 0)
     {
-        curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_body);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(post_body));
+        (void)curl_easy_setopt(curl, CURLOPT_POST, 1L);
+        (void)curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_body);
+        (void)curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE,
+                               (long)strlen(post_body));
     }
     else if (strcmp(method, "GET") != 0)
     {
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
+        (void)curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
         if (post_body[0] != '\0')
         {
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_body);
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE,
-                             (long)strlen(post_body));
+            (void)curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_body);
+            (void)curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE,
+                                   (long)strlen(post_body));
         }
     }
 }
@@ -149,6 +165,9 @@ static const char B64[] =
 static size_t base64_encode(const char *src, size_t src_len, char *dst,
                             size_t dst_size)
 {
+    assert(src != NULL);
+    assert(dst != NULL);
+    assert(dst_size > 0);
     size_t o = 0, i = 0;
     while (i < src_len && o + 4 < dst_size)
     {
@@ -179,6 +198,11 @@ void perform_api_call(int sock, const char *url, const char *method,
                       const char *post_body, const char *ct,
                       const char *headers_payload)
 {
+    assert(url != NULL);
+    assert(method != NULL);
+    assert(post_body != NULL);
+    assert(ct != NULL);
+    assert(headers_payload != NULL);
     static char resolved[RESOLVED_URL_SIZE];
     resolve_url(url, resolved, sizeof(resolved));
     static RespBuf rb;
@@ -194,56 +218,65 @@ void perform_api_call(int sock, const char *url, const char *method,
     if (!curl)
     {
         const char *msg = "{\"error\":\"curl_easy_init failed\"}";
-        char hdr[256];
-        snprintf(hdr, sizeof(hdr),
-                 "HTTP/1.1 502 Bad Gateway\r\nContent-Type: "
-                 "application/json\r\nAccess-Control-Allow-Origin: "
-                 "*\r\nContent-Length: %zu\r\n\r\n",
-                 strlen(msg));
-        send(sock, hdr, strlen(hdr), 0);
-        send(sock, msg, strlen(msg), 0);
+        char hdr0[256];
+        (void)snprintf(hdr0, sizeof(hdr0),
+                       "HTTP/1.1 502 Bad Gateway\r\nContent-Type: "
+                       "application/json\r\nAccess-Control-Allow-Origin: "
+                       "*\r\nContent-Length: %zu\r\n\r\n",
+                       strlen(msg));
+        if (send_all(sock, hdr0, strlen(hdr0)) == 0)
+        {
+            (void)send_all(sock, msg, strlen(msg));
+        }
         return;
     }
     struct curl_slist *hdrs = build_headers(ct, headers_payload);
-    curl_easy_setopt(curl, CURLOPT_URL, resolved);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_to_buf);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rb);
-    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_callback);
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &hb);
+    (void)curl_easy_setopt(curl, CURLOPT_URL, resolved);
+    (void)curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_to_buf);
+    (void)curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rb);
+    (void)curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_callback);
+    (void)curl_easy_setopt(curl, CURLOPT_HEADERDATA, &hb);
     if (hdrs)
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hdrs);
+    {
+        (void)curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hdrs);
+    }
     setup_method(curl, method, post_body);
     CURLcode rc = curl_easy_perform(curl);
     if (rc != CURLE_OK)
     {
-        snprintf(err_body, sizeof(err_body), "{\"error\":\"Curl Error: %s\"}",
-                 curl_easy_strerror(rc));
+        (void)snprintf(err_body, sizeof(err_body),
+                       "{\"error\":\"Curl Error: %s\"}",
+                       curl_easy_strerror(rc));
         resp_data = err_body;
         resp_len = strlen(err_body);
     }
     else
     {
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+        (void)curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
         resp_data = rb.buf;
         resp_len = rb.len;
     }
     if (hdrs)
+    {
         curl_slist_free_all(hdrs);
+    }
     curl_easy_cleanup(curl);
     static char b64_hdrs[MAX_RESP_HDRS * 2];
-    base64_encode(hb.buf, hb.len, b64_hdrs, sizeof(b64_hdrs));
+    (void)base64_encode(hb.buf, hb.len, b64_hdrs, sizeof(b64_hdrs));
     static char hdr[MAX_RESP_HDRS * 2 + 1024];
-    snprintf(hdr, sizeof(hdr),
-             "HTTP/1.1 200 OK\r\n"
-             "Content-Type: application/octet-stream\r\n"
-             "Access-Control-Allow-Origin: *\r\n"
-             "Access-Control-Expose-Headers: "
-             "X-Proxy-Status,X-Resp-Headers,X-Resp-Size\r\n"
-             "X-Proxy-Status: %ld\r\n"
-             "X-Resp-Headers: %s\r\n"
-             "X-Resp-Size: %zu\r\n"
-             "Content-Length: %zu\r\n\r\n",
-             http_code, b64_hdrs, resp_len, resp_len);
-    send(sock, hdr, strlen(hdr), 0);
-    send(sock, resp_data, resp_len, 0);
+    (void)snprintf(hdr, sizeof(hdr),
+                   "HTTP/1.1 200 OK\r\n"
+                   "Content-Type: application/octet-stream\r\n"
+                   "Access-Control-Allow-Origin: *\r\n"
+                   "Access-Control-Expose-Headers: "
+                   "X-Proxy-Status,X-Resp-Headers,X-Resp-Size\r\n"
+                   "X-Proxy-Status: %ld\r\n"
+                   "X-Resp-Headers: %s\r\n"
+                   "X-Resp-Size: %zu\r\n"
+                   "Content-Length: %zu\r\n\r\n",
+                   http_code, b64_hdrs, resp_len, resp_len);
+    if (send_all(sock, hdr, strlen(hdr)) == 0)
+    {
+        (void)send_all(sock, resp_data, resp_len);
+    }
 }

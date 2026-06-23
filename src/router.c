@@ -3,6 +3,7 @@
 #include "decoder.h"
 #include "http_parser.h"
 #include "http_response.h"
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -27,6 +28,9 @@ static const struct
     {"/index.html", "web/index.html", "text/html"},
     {"/css/style.css", "web/css/style.css", "text/css"},
     {"/js/app.js", "web/js/app.js", "text/javascript"},
+    {"/js/graph.js", "web/js/graph.js", "text/javascript"},
+    {"/js/import.js", "web/js/import.js", "text/javascript"},
+    {"/js/sync.js", "web/js/sync.js", "text/javascript"},
     {"/resources/hat.png", "resources/hat.png", "image/png"},
     {"/requests.json", "data/requests.json", "application/json"},
 };
@@ -45,6 +49,9 @@ static const struct
 static int read_full_request(int sock, char *buf, int buf_size,
                              HttpRequest *req)
 {
+    assert(buf != NULL);
+    assert(req != NULL);
+    assert(buf_size > 0);
     int n = (int)read(sock, buf, (size_t)buf_size - 1);
     if (n <= 0)
     {
@@ -96,7 +103,7 @@ static void send_413(int sock)
                        "Access-Control-Allow-Origin: *\r\n"
                        "Content-Length: 27\r\n\r\n"
                        "{\"error\":\"Payload too large\"}";
-    send(sock, resp, strlen(resp), 0);
+    (void)send_all(sock, resp, strlen(resp));
 }
 
 /*
@@ -107,8 +114,9 @@ static void send_413(int sock)
  */
 static void send_400(int sock, const char *msg)
 {
+    assert(msg != NULL);
     char body[128];
-    snprintf(body, sizeof(body), "{\"error\":\"%s\"}", msg);
+    (void)snprintf(body, sizeof(body), "{\"error\":\"%s\"}", msg);
     send_text(sock, 400, body);
 }
 
@@ -120,6 +128,7 @@ static void send_400(int sock, const char *msg)
  */
 static void handle_proxy_route(int sock, const HttpRequest *req)
 {
+    assert(req != NULL);
     if (!req->body || req->body_len == 0)
     {
         send_400(sock, "Empty body");
@@ -199,14 +208,24 @@ static void handle_proxy_route(int sock, const HttpRequest *req)
  */
 static void handle_save_route(int sock, const HttpRequest *req)
 {
-    if (req->body && req->body_len > 0)
+    assert(req != NULL);
+    if (!req->body || req->body_len == 0)
     {
-        FILE *f = fopen("data/requests.json", "w");
-        if (f)
-        {
-            fwrite(req->body, 1, req->body_len, f);
-            fclose(f);
-        }
+        send_400(sock, "Empty body");
+        return;
+    }
+    FILE *f = fopen("data/requests.json", "w");
+    if (!f)
+    {
+        send_text(sock, 500, "{\"error\":\"Cannot open data file\"}");
+        return;
+    }
+    size_t written = fwrite(req->body, 1, req->body_len, f);
+    int close_rc = fclose(f);
+    if (written != req->body_len || close_rc != 0)
+    {
+        send_text(sock, 500, "{\"error\":\"Write failed\"}");
+        return;
     }
     send_text(sock, 200, "{\"status\":\"saved\"}");
 }
@@ -222,7 +241,7 @@ static void handle_options(int sock)
                       "Access-Control-Allow-Origin: *\r\n"
                       "Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n"
                       "Access-Control-Allow-Headers: Content-Type\r\n\r\n";
-    send(sock, pre, strlen(pre), 0);
+    (void)send_all(sock, pre, strlen(pre));
 }
 
 /*
@@ -233,6 +252,7 @@ static void handle_options(int sock)
  */
 static void route_request(int sock, const HttpRequest *req)
 {
+    assert(req != NULL);
     if (strcmp(req->method, "OPTIONS") == 0)
     {
         handle_options(sock);
@@ -273,7 +293,7 @@ static void route_request(int sock, const HttpRequest *req)
         }
     }
     const char *nf = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
-    send(sock, nf, strlen(nf), 0);
+    (void)send_all(sock, nf, strlen(nf));
 }
 
 /*
@@ -283,6 +303,7 @@ static void route_request(int sock, const HttpRequest *req)
  */
 void handle_client(int sock)
 {
+    assert(sock >= 0);
     static char buf[BUFFER_SIZE];
     HttpRequest req;
     int n = read_full_request(sock, buf, BUFFER_SIZE, &req);

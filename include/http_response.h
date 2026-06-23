@@ -1,6 +1,18 @@
 #ifndef HTTP_RESPONSE_H
 #define HTTP_RESPONSE_H
 
+#include <stddef.h>
+
+/*
+ * Writes the whole buffer to the socket, tolerating partial sends.
+ *
+ * @param sock
+ * @param buf
+ * @param len
+ * @return
+ */
+int send_all(int sock, const char *buf, size_t len);
+
 /*
  * Sends 404 if not found.
  *
