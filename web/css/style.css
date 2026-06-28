@@ -1,4 +1,6 @@
 :root{--bg:#F4F2EB;--bg2:#FBFAF6;--bg3:#ECE8DD;--tx:#6E6B63;--tx2:#1B1A17;--acc:#C8612F;--acc-deep:#A84A24;--save:#4E7A1F;--red:#C0392B;--yel:#93897A;--brd:#E4E0D4;--cbg:#FAF8F2;--ccl:#3A382F;--hat-op:.16;--hi:rgba(200,97,47,.12);--serif:Georgia,"Times New Roman",serif;--brand-blue:#163A8E;--m-get:#3B6D11;--m-get-bg:#EAF3DE;--m-post:#854F0B;--m-post-bg:#FAEEDA;--m-put:#185FA5;--m-put-bg:#E6F1FB;--m-del:#A32D2D;--m-del-bg:#FCEBEB;--m-patch:#6D3FA0;--m-patch-bg:#EFEAFB}
+
+:root[data-theme="dark"]{--bg:#1B1A17;--bg2:#252420;--bg3:#2D2C27;--tx:#A8A6A0;--tx2:#F4F2EB;--acc:#C8612F;--acc-deep:#E07A4F;--save:#76B04F;--red:#E74C3C;--yel:#BDB6A9;--brd:#3A382F;--cbg:#22211C;--ccl:#F4F2EB;--hi:rgba(200,97,47,.25)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);height:100vh;overflow:hidden;display:flex;flex-direction:column;transition:background .3s,color .3s}
 header{display:flex;align-items:flex-end;justify-content:flex-start;gap:.6rem;padding:.6rem 1rem;background:var(--bg2);border-bottom:1px solid var(--brd);position:relative;z-index:200;flex-shrink:0}
 header img{width:52px;height:52px}header h1{font-family:var(--serif);font-style:italic;font-size:1.65rem;font-weight:500;color:var(--brand-blue);letter-spacing:.2px}
