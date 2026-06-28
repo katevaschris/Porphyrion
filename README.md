@@ -3,7 +3,7 @@
 An API client — send HTTP requests, read the responses.
 
 Builds in 5~15s · ~ 5 MB RAM · 0.732 MB image.
-<img width="1470" height="881" alt="image" src="https://github.com/user-attachments/assets/ca779fbc-cf33-4630-93bb-b795ebbbe4c7" />
+<img width="1470" height="879" alt="image" src="https://github.com/user-attachments/assets/dafd0330-d099-4a43-bfa9-581ccc086f26" />
 
 
 ## Run
