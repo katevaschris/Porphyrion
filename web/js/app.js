@@ -2,6 +2,10 @@ const root=document.documentElement;const $=id=>document.getElementById(id);cons
 const D={darkToggle:$('darkToggle'),corsToggle:$('corsToggle'),hatsToggle:$('hatsToggle'),hatsBg:$('hatsBg'),savedList:$('savedList'),historyList:$('historyList'),tabBar:$('tabBar'),tabCollections:$('tab-collections'),tabHistory:$('tab-history'),reqName:$('reqName'),reqFolder:$('reqFolder'),method:$('method'),url:$('url'),authType:$('authType'),authToken:$('authToken'),authUser:$('authUser'),authPass:$('authPass'),apiKey:$('apiKey'),apiVal:$('apiVal'),apiLoc:$('apiLoc'),bearerSect:$('auth-bearer-sect'),basicSect:$('auth-basic-sect'),apikeySect:$('auth-apikey-sect'),body:$('body'),formGrid:$('formGrid'),paramsGrid:$('paramsGrid'),headersGrid:$('headersGrid'),sendBtn:$('sendBtn'),saveBtn:$('saveBtn'),gearBtn:$('gearBtn'),settingsPanel:$('settings-panel'),curlBtn:$('curlBtn'),resp:$('resp'),badge:$('badge'),timing:$('timing'),respSize:$('respSize'),pathIndicator:$('pathIndicator'),ctxMenu:$('ctxMenu'),modalOverlay:$('modalOverlay'),modalTitle:$('modalTitle'),modalInput:$('modalInput'),modalOk:$('modalOk'),modalCancel:$('modalCancel'),folderModal:$('folderModal'),fmPath:$('fmPath'),fmName:$('fmName'),fmAuthType:$('fmAuthType'),fmAuthToken:$('fmAuthToken'),fmAuthUser:$('fmAuthUser'),fmAuthPass:$('fmAuthPass'),fmApiKey:$('fmApiKey'),fmApiVal:$('fmApiVal'),fmApiLoc:$('fmApiLoc'),fmBearerSect:$('fm-auth-bearer'),fmBasicSect:$('fm-auth-basic'),fmApikeySect:$('fm-auth-apikey'),badgeParams:$('badge-params'),badgeHeaders:$('badge-headers'),reqTabs:$('reqTabs'),graphqlPane:$('graphqlPane'),gqlQuery:$('gqlQuery'),gqlVars:$('gqlVars'),respHeadersPane:$('respHeadersPane'),respHeadersTable:$('respHeadersTable'),respTabs:$('respTabs'),respCopyBtn:$('respCopyBtn'),envSelect:$('envSelect'),envEditor:$('envEditor'),addEnvBtn:$('addEnvBtn'),};
 function applyTheme(dark){root.setAttribute('data-theme',dark?'dark':'light');if(D.darkToggle)D.darkToggle.checked=dark;
 localStorage.setItem('ph-theme',dark?'dark':'light');}let hatsActive=true,lastTs=null;
+// ... existing code ...
+// Adding the listener for darkToggle
+D.darkToggle.addEventListener('change',e=>applyTheme(e.target.checked));
+
 function applyHats(on){root.setAttribute('data-hats',on?'on':'off');if(D.hatsToggle)D.hatsToggle.checked=on;
 localStorage.setItem('ph-hats',on?'on':'off');hatsActive=on;lastTs=null;cachedHatOp=parseFloat(getComputedStyle(root).getPropertyValue('--hat-op'))||0.4;
 if(!hatsActive)HATS.forEach(h=>{h.el.style.opacity=0;});}const HATS=[];let cachedHatOp=0.4;
@@ -320,7 +324,8 @@ if(!del||!del.dataset.ei)return;const ei=parseInt(del.dataset.ei);if(del.dataset
 saveEnvs();renderEnvEditor();};D.envSelect.onchange=e=>{currentEnv=environments.find(env=>env.name===e.target.value)||null;
 localStorage.setItem('ph-active-env',e.target.value);};function colorMethodSelect(){const map={GET:'--m-get',POST:'--m-post',PUT:'--m-put',DELETE:'--m-del',PATCH:'--m-patch'};
 D.method.style.color=getComputedStyle(root).getPropertyValue(map[D.method.value]||'--acc').trim();
-}const init=()=>{try{applyTheme(false);cachedHatOp=parseFloat(getComputedStyle(root).getPropertyValue('--hat-op'))||0.4;
+}const init=()=>{try{const savedTheme=localStorage.getItem('ph-theme')==='dark';
+applyTheme(savedTheme);cachedHatOp=parseFloat(getComputedStyle(root).getPropertyValue('--hat-op'))||0.4;
 applyHats(localStorage.getItem('ph-hats')==='on');}catch(e){console.warn("Init error:",e);
 applyTheme(false);applyHats(false);}loadEnvs();createTab();};D.gearBtn.onclick=e=>{e.stopPropagation();
 D.settingsPanel.classList.toggle('open');};document.addEventListener('click',e=>{if(D.settingsPanel.classList.contains('open')&&!D.settingsPanel.contains(e.target)&&!D.gearBtn.contains(e.target))D.settingsPanel.classList.remove('open');
