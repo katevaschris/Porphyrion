@@ -1,4 +1,4 @@
-# Porphyrion <img width="42" height="42" alt="hat" src="resources/hat.png" /> <sub>v0.4</sub>
+# Porphyrion <img width="42" height="42" alt="hat" src="resources/hat.png" /> <sub>v0.5</sub>
 
 An API client — send HTTP requests, read the responses.
 

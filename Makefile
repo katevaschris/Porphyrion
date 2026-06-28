@@ -1,4 +1,4 @@
-VERSION = v0.4
+VERSION = v0.5
 CC     ?= gcc
 
 MAKEFLAGS += --warn-undefined-variables --no-builtin-rules
