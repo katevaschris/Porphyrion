@@ -1,9 +1,10 @@
-# Porphyrion <img width="42" height="42" alt="hat" src="resources/hat.png" /> <sub>v0.4</sub>
+# Porphyrion <img width="42" height="42" alt="hat" src="resources/hat.png" /> <sub>v0.5</sub>
 
 An API client — send HTTP requests, read the responses.
 
-**Fast.** Boots instantly · builds in ~2s · ~5 MB RAM · 0.7 MB image.
-<img width="1470" height="919" alt="image" src="https://github.com/user-attachments/assets/d03bd539-50da-4cc3-84ab-54ace0759efe" />
+Builds in 5~15s · ~ 5 MB RAM · 0.732 MB image.
+<img width="1470" height="879" alt="image" src="https://github.com/user-attachments/assets/dafd0330-d099-4a43-bfa9-581ccc086f26" />
+
 
 ## Run
 

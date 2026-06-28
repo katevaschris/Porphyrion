@@ -34,7 +34,7 @@ set('Pulled '+arr.length);}catch(e){set('Pull failed: '+e.message,true);}}var FI
 function renderFields(host){var c=cfg();host.innerHTML='';(FIELDS[c.provider]||[]).forEach(function(f){var i=document.createElement('input');
 i.className='kv-input w-full';i.style.marginTop='.3rem';i.type=f[2]==='password'?'password':'text';
 i.placeholder=f[1];i.value=c[f[0]]||'';i.oninput=function(){var cc=cfg();cc[f[0]]=i.value;
-setCfg(cc);};host.appendChild(i);});}function buildSettings(){var panel=document.getElementById('settings-panel');
+setCfg(cc);};host.appendChild(i);});}function buildSettings(){var panel=document.getElementById('set-sync')||document.getElementById('settings-panel');
 if(!panel||document.getElementById('syncProvider'))return;var c=cfg(),wrap=document.createElement('div');
 var sep=document.createElement('div');sep.className='ctx-sep';wrap.appendChild(sep);
 var lbl=document.createElement('label');lbl.className='lbl-sm';lbl.textContent='SYNC';
@@ -51,13 +51,5 @@ st.className='hint';st.id='syncStatus';st.style.marginTop='.3rem';wrap.appendChi
 panel.appendChild(wrap);function set(m,e){st.textContent=m;st.style.color=e?'var(--red)':'var(--tx)';
 }sel.onchange=function(){var cc=cfg();cc.provider=sel.value;setCfg(cc);renderFields(fields);
 };pullB.onclick=function(){doPull(set);};pushB.onclick=function(){doPush(set);};
-renderFields(fields);}function buildSyncButton(){var tabs=document.querySelector('#panel-saved .side-tabs');
-if(!tabs||document.getElementById('syncBtn'))return;var b=document.createElement('div');
-b.id='syncBtn';b.className='side-tab';b.style.cssText='flex:0 0 auto;padding:.6rem .7rem';
-var ico='<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>';
-b.innerHTML=ico;b.onclick=function(){if(!cfg().provider){document.getElementById('gearBtn').click();
-return;}doPush(function(m,e){b.innerHTML=e?'&times;':(/Pushed/.test(m)?'&check;':ico);
-b.style.color=e?'var(--red)':'var(--save)';if(/check|times/.test(b.innerHTML))setTimeout(function(){b.innerHTML=ico;
-b.style.color='';},1800);});};tabs.appendChild(b);}function init(){buildSettings();
-buildSyncButton();}if(document.readyState!=='loading')init();else document.addEventListener('DOMContentLoaded',init);
+renderFields(fields);}function buildSyncButton(){var host=document.querySelector('.hdr-btns');if(!host||document.getElementById('syncBtn'))return;var ico='<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',label=ico+' Sync';var b=document.createElement('button');b.id='syncBtn';b.className='hdr-btn';b.title='Sync collections';b.innerHTML=label;b.onclick=function(){if(!cfg().provider){document.getElementById('gearBtn').click();return;}doPush(function(m,e){b.innerHTML=e?'&times; Failed':(/Pushed/.test(m)?'&check; Synced':'&hellip; Sync');b.style.color=e?'var(--red)':(/Pushed/.test(m)?'var(--save)':'');if(e||/Pushed/.test(m))setTimeout(function(){b.innerHTML=label;b.style.color='';},1800);});};var anchor=document.getElementById('historyBtn')||document.getElementById('gearBtn');if(anchor)host.insertBefore(b,anchor);else host.appendChild(b);}function init(){buildSettings();}if(document.readyState!=='loading')init();else document.addEventListener('DOMContentLoaded',init);
 })();

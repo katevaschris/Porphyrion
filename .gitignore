@@ -12,3 +12,4 @@ data/*
 
 # Ignore loose json files in the root just in case
 *.json
+.deploy-stamp

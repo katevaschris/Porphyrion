@@ -62,7 +62,7 @@ RUN --mount=type=cache,target=/app/obj,id=obj-alpine318 \
 FROM scratch
 LABEL org.opencontainers.image.title="Porphyrion" \
       org.opencontainers.image.description="API client" \
-      org.opencontainers.image.version="v0.4" \
+      org.opencontainers.image.version="v0.5" \
       org.opencontainers.image.source="https://github.com/katevaschris/Porphyrion"
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /app/sam-porter /sam-porter

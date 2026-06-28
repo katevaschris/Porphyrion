@@ -2,26 +2,18 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Porphyrion</title>
 <link rel="stylesheet" href="css/style.css"></head><body><div id="hatsBg"></div>
 <header><img src="/resources/hat.png" alt=""><h1>Porphyrion</h1><div class="hdr-btns">
-<select id="envSelect" class="env-select"><option value="">No Environment</option>
-</select><button class="hdr-btn" id="mapViewBtn" title="Map view"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<button class="hdr-btn" id="envBtn" title="Environment">Environment</button><select id="envSelect" class="env-select" style="display:none"><option value="">No Environment</option></select><button class="hdr-btn" id="mapViewBtn" title="Map view"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
 <circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/>
-<path d="M5 8v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M12 13v3"/></svg> Map</button><button class="hdr-btn" id="importBtn" title="Import cURL">
-Import</button><button class="hdr-btn gear-btn" id="gearBtn"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M5 8v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M12 13v3"/></svg> Map</button><button class="hdr-btn" id="historyBtn" title="History">History</button><button class="hdr-btn gear-btn" id="gearBtn"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
 <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-</svg> Settings</button></div></header><div id="settings-panel"><label class="lbl-sm" style="font-weight:700;color:var(--tx2)">
-SETTINGS</label><div class="ctx-sep"></div><div class="setting-row"><span>CORS Proxy</span>
-<input type="checkbox" id="corsToggle" class="toggle" checked title="Disables browser CORS restrictions">
-</div><div class="setting-row"><span>Animated hats</span><input type="checkbox" id="hatsToggle" class="toggle">
-</div><div class="ctx-sep"></div><label class="lbl-sm">ENVIRONMENTS</label><div id="envEditor">
-</div><button class="kv-add" id="addEnvBtn" style="margin-top:.3rem">+ Add Environment</button>
-<div class="ctx-sep"></div><div class="version-note">Porphyrion</div></div><div id="ctxMenu" class="context-menu">
+</svg> Settings</button></div></header><div id="settings-panel"><div class="set-tabs"><div class="set-tab active" data-set="general">General</div><div class="set-tab" data-set="env">Environments</div><div class="set-tab" data-set="sync">Sync</div><div class="set-tab" data-set="data">Data</div></div><div class="set-sec active" id="set-general"><div class="setting-row"><span>CORS Proxy</span><input type="checkbox" id="corsToggle" class="toggle" checked title="Disables browser CORS restrictions"></div><div class="setting-row"><span>Animated hats</span><input type="checkbox" id="hatsToggle" class="toggle"></div></div><div class="set-sec" id="set-env"><div id="envEditor"></div><button class="kv-add" id="addEnvBtn" style="margin-top:.3rem">+ Add Environment</button></div><div class="set-sec" id="set-sync"></div><div class="set-sec" id="set-data"><button class="kv-add" id="importBtn" title="Import cURL">Import cURL</button><button class="kv-add" id="exportColBtn">Export collection</button><button class="kv-add" id="importColBtn">Import collection</button><input type="file" id="importColFile" accept="application/json" style="display:none"></div><div class="ctx-sep"></div><div class="version-note">Porphyrion</div></div><div id="historyPanel"><label class="lbl-sm" style="font-weight:700;color:var(--tx2)">HISTORY</label><div class="ctx-sep"></div><div id="historyList"></div></div><div id="envPanel"><label class="lbl-sm" style="font-weight:700;color:var(--tx2)">ENVIRONMENT</label><div class="ctx-sep"></div><div id="envList"></div></div><div id="ctxMenu" class="context-menu">
 </div><div id="modalOverlay" class="modal-overlay"><div class="modal-card"><div id="modalTitle" class="modal-title">
 </div><input type="text" id="modalInput" class="modal-input" style="display:none">
 <div class="modal-btns"><button class="modal-btn" id="modalCancel">Cancel</button>
 <button class="modal-btn" id="modalOk">OK</button></div></div></div><div class="ws">
 <div class="panel" id="panel-saved"><div class="side-tabs"><div class="side-tab active" id="tab-collections">
-Collections</div><div class="side-tab" id="tab-history">History</div></div><div class="panel-body">
-<div id="savedList"></div><div id="historyList" style="display:none"></div></div>
+Collections</div><div class="side-tab" id="tab-history" style="display:none">History</div><div class="side-tab" id="tab-flows">Flows</div></div><div class="panel-body">
+<div id="savedList"></div><div id="flowsList" style="display:none"></div></div>
 </div><div class="resizer" id="r1"></div><div class="col"><div class="tab-bar" id="tabBar">
 </div><div class="inner-wrap"><div class="panel panel-trans" id="panel-req"><div class="panel-body">
 <div id="pathIndicator"></div><div class="row-between"><div class="row-fill"><label>
